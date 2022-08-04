@@ -2,7 +2,7 @@
 name = "poolio"
 version = "0.1.1"
 edition = "2021"
-description = "A simple thread-pool."
+description = "A thread-pool."
 documentation = "https://docs.rs/poolio"
 readme = "README.md"
 repository = "https://github.com/aronpaulson/poolio"
