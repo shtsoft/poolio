@@ -9,3 +9,11 @@ repository = "https://github.com/aronpaulson/poolio"
 license = "GPL-3.0-or-later"
 
 [dependencies]
+
+[dev-dependencies]
+criterion = "0.3"
+rayon = "1.5"
+
+[[bench]]
+name = "foobar"
+harness = false
