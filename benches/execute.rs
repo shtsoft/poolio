@@ -2,11 +2,12 @@ mod pool;
 
 use pool::Pool;
 
-fn execute<P>(pool: P)
+fn execute<P>(size: usize) -> Option<P>
 where
     P: Pool,
 {
     const JOBS: usize = 100;
+    let pool: P = Pool::new(size);
 
     for n in 0..JOBS {
         let compute_primes_less_than_n = move || {
@@ -46,22 +47,22 @@ where
 
         pool.execute(compute_primes_less_than_n);
     }
+    None
 }
 
 use criterion::black_box;
 
-macro_rules! bench_identifier_execute {
-    ($cr8:literal, $size:expr) => {
-        &format!("execute:{}-pool-({}-worker(s))", $cr8, $size)
+macro_rules! bench_identifier {
+    ($function:expr, $cr8:literal, $size:expr) => {
+        &format!("{}:{}-pool-({}-worker(s))", $function, $cr8, $size)
     };
 }
 
-macro_rules! bencher_execute {
-    ($Pool:ty, $size:expr) => {
+macro_rules! bencher {
+    ($function:expr, $Pool:ty, $size:expr) => {
         |b| {
             b.iter(|| {
-                let pool: $Pool = Pool::new(black_box($size));
-                execute(pool);
+                let _: Option<$Pool> = $function(black_box($size));
             })
         }
     };
@@ -74,13 +75,13 @@ fn criterion_benchmark(c: &mut Criterion) {
 
     for size in sizes {
         c.bench_function(
-            bench_identifier_execute!("poolio", size),
-            bencher_execute!(poolio::ThreadPool, size),
+            bench_identifier!("execute", "poolio", size),
+            bencher!(execute, poolio::ThreadPool, size),
         );
 
         c.bench_function(
-            bench_identifier_execute!("rayon", size),
-            bencher_execute!(rayon::ThreadPool, size),
+            bench_identifier!("execute", "rayon", size),
+            bencher!(execute, rayon::ThreadPool, size),
         );
     }
 }
