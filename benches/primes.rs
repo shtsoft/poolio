@@ -1,5 +1,5 @@
 mod bencher_cores;
-use bencher_cores::execute;
+use bencher_cores::primes;
 
 mod macros;
 
@@ -10,13 +10,13 @@ fn criterion_benchmark(c: &mut Criterion) {
 
     for size in sizes {
         c.bench_function(
-            bench_identifier!("execute", "poolio", size),
-            bencher!(execute, poolio::ThreadPool, size),
+            bench_identifier!("primes", "poolio", size),
+            bencher!(primes, poolio::ThreadPool, size),
         );
 
         c.bench_function(
-            bench_identifier!("execute", "rayon", size),
-            bencher!(execute, rayon::ThreadPool, size),
+            bench_identifier!("primes", "rayon", size),
+            bencher!(primes, rayon::ThreadPool, size),
         );
     }
 }

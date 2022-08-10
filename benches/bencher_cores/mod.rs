@@ -1,4 +1,4 @@
 mod pool;
 
-mod execute_core;
-pub use crate::bencher_cores::execute_core::execute;
+mod primes_core;
+pub use crate::bencher_cores::primes_core::primes;

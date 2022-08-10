@@ -1,6 +1,6 @@
 use super::pool::Pool;
 
-pub fn execute<P>(size: usize) -> Option<P>
+pub fn primes<P>(size: usize) -> Option<P>
 where
     P: Pool,
 {
