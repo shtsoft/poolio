@@ -66,7 +66,8 @@
 
 use std::fmt;
 use std::panic::UnwindSafe;
-use std::sync::mpsc::{channel, Sender};
+use crossbeam::channel::unbounded as channel;
+use crossbeam::channel::Sender;
 use std::thread;
 
 //TODO put ThreadHandle into a module (don't forget to include the unit tests)
