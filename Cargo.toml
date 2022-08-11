@@ -9,6 +9,7 @@ repository = "https://github.com/aronpaulson/poolio"
 license = "GPL-3.0-or-later"
 
 [dependencies]
+crossbeam = "0.8"
 
 [dev-dependencies]
 criterion = "0.3"
