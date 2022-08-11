@@ -5,6 +5,7 @@ where
     P: Pool,
 {
     const JOBS: usize = 100;
+
     let pool: P = Pool::new(size);
 
     for n in 0..JOBS {
@@ -45,5 +46,8 @@ where
 
         pool.execute(compute_primes_less_than_n);
     }
+
+    pool.join();
+
     None
 }
