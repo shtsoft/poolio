@@ -15,8 +15,8 @@ fn criterion_benchmark(c: &mut Criterion) {
         );
 
         c.bench_function(
-            bench_identifier!("primes", "rayon", size),
-            bencher!(primes, rayon::ThreadPool, size),
+            bench_identifier!("primes", "threadpool", size),
+            bencher!(primes, threadpool::ThreadPool, size),
         );
     }
 }

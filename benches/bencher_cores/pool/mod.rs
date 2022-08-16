@@ -5,6 +5,7 @@ pub trait Pool {
     fn execute<F>(&self, f: F)
     where
         F: FnOnce() + UnwindSafe + Send + 'static;
+    fn join(&self);
 }
 
 impl Pool for poolio::ThreadPool {
@@ -18,20 +19,23 @@ impl Pool for poolio::ThreadPool {
     {
         poolio::ThreadPool::execute(self, f);
     }
+
+    fn join(&self) {}
 }
 
-impl Pool for rayon::ThreadPool {
-    fn new(number_of_workers: usize) -> rayon::ThreadPool {
-        rayon::ThreadPoolBuilder::new()
-            .num_threads(number_of_workers)
-            .build()
-            .unwrap()
+impl Pool for threadpool::ThreadPool {
+    fn new(number_of_workers: usize) -> threadpool::ThreadPool {
+        threadpool::ThreadPool::new(number_of_workers)
     }
 
     fn execute<F>(&self, f: F)
     where
         F: FnOnce() + UnwindSafe + Send + 'static,
     {
-        rayon::ThreadPool::install(self, f);
+        threadpool::ThreadPool::execute(self, f);
+    }
+
+    fn join(&self) {
+        self.join();
     }
 }
