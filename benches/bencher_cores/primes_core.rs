@@ -34,7 +34,7 @@ where
             let mut counter = 0;
 
             for _ in primes {
-                counter += counter;
+                counter += 1;
             }
 
             use std::io::*;
