@@ -10,12 +10,12 @@ where
 
     for n in 0..JOBS {
         let compute_primes_less_than_n = move || {
+            use std::io::{sink, Write};
+
             fn is_prime(i: usize) -> bool {
                 for j in 2..(i / 2) {
                     if i % j == 0 {
                         return false;
-                    } else {
-                        continue;
                     }
                 }
                 true
@@ -36,8 +36,6 @@ where
             for _ in primes {
                 counter += 1;
             }
-
-            use std::io::*;
 
             let response = format!("There are {} primes which are less than {}.", counter, cap);
 

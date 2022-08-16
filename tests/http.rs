@@ -14,9 +14,9 @@ fn test_http() {
 
     let pool = ThreadPool::new(4, PanicSwitch::Respawn).unwrap();
     for _ in 0..10 {
-        pool.execute(|| http_client(ADDR, Method::Get));
-        pool.execute(|| http_client(ADDR, Method::Head));
-        pool.execute(|| http_client(ADDR, Method::Put));
+        pool.execute(|| http_client(ADDR, &Method::Get));
+        pool.execute(|| http_client(ADDR, &Method::Head));
+        pool.execute(|| http_client(ADDR, &Method::Put));
     }
 }
 
@@ -26,7 +26,7 @@ enum Method {
     Put,
 }
 
-fn http_client(addr: &str, method: Method) {
+fn http_client(addr: &str, method: &Method) {
     let mut stream = TcpStream::connect(addr).unwrap();
 
     let request = match method {
@@ -46,9 +46,8 @@ fn http_client(addr: &str, method: Method) {
     let err = b"HTTP/1.1 404 NOT FOUND\r\n";
 
     match method {
-        Method::Get => assert!(buffer.starts_with(ok)),
+        Method::Put | Method::Get => assert!(buffer.starts_with(ok)),
         Method::Head => assert!(buffer.starts_with(err)),
-        Method::Put => assert!(buffer.starts_with(ok)),
     };
 }
 

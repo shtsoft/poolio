@@ -9,30 +9,30 @@ pub trait Pool {
 }
 
 impl Pool for poolio::ThreadPool {
-    fn new(number_of_workers: usize) -> poolio::ThreadPool {
-        poolio::ThreadPool::new(number_of_workers, poolio::PanicSwitch::Kill).unwrap()
+    fn new(number_of_workers: usize) -> Self {
+        Self::new(number_of_workers, poolio::PanicSwitch::Kill).unwrap()
     }
 
     fn execute<F>(&self, f: F)
     where
         F: FnOnce() + UnwindSafe + Send + 'static,
     {
-        poolio::ThreadPool::execute(self, f);
+        Self::execute(self, f);
     }
 
     fn join(&self) {}
 }
 
 impl Pool for threadpool::ThreadPool {
-    fn new(number_of_workers: usize) -> threadpool::ThreadPool {
-        threadpool::ThreadPool::new(number_of_workers)
+    fn new(number_of_workers: usize) -> Self {
+        Self::new(number_of_workers)
     }
 
     fn execute<F>(&self, f: F)
     where
         F: FnOnce() + UnwindSafe + Send + 'static,
     {
-        threadpool::ThreadPool::execute(self, f);
+        Self::execute(self, f);
     }
 
     fn join(&self) {

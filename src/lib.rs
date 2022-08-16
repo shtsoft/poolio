@@ -104,8 +104,8 @@ enum Message {
 impl fmt::Display for Message {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            Message::NewJob(_) => write!(f, "[NewJob]"),
-            Message::Terminate => write!(f, "[Terminate]"),
+            Self::NewJob(_) => write!(f, "[NewJob]"),
+            Self::Terminate => write!(f, "[Terminate]"),
         }
     }
 }
@@ -140,12 +140,12 @@ impl ThreadPool {
     /// ```
     /// let pool = poolio::ThreadPool::new(3, poolio::PanicSwitch::Kill).unwrap();
     /// ```
-    pub fn new<'a>(size: usize, mode: PanicSwitch) -> Result<ThreadPool, &'a str> {
+    pub fn new<'a>(size: usize, mode: PanicSwitch) -> Result<Self, &'a str> {
         if size == 0 {
             return Err("Setting up a pool with no workers is not allowed.");
         };
 
-        let pool = ThreadPool {
+        let pool = Self {
             supervisor: Supervisor::new(size, mode),
         };
         Ok(pool)
@@ -257,7 +257,7 @@ impl Supervisor {
     ///
     /// In particular, it spawns a thread and sets up a way to communicate to the thread.
     /// Moreover it creates the workers controlled by the just spawned supervisor-thread.
-    fn new(mut number_of_workers: usize, mode: PanicSwitch) -> Supervisor {
+    fn new(mut number_of_workers: usize, mode: PanicSwitch) -> Self {
         // this channel is used by the pool to contact the supervisor
         let (orders_s, orders_r) = channel();
 
@@ -328,7 +328,7 @@ impl Supervisor {
             drop(orders_r);
         });
 
-        Supervisor {
+        Self {
             orders_s,
             thread: Some(thread),
         }
@@ -349,7 +349,7 @@ impl Worker {
     /// - `statuses_s` is where the worker puts its current status.
     ///
     /// In particular, it spawns a thread and sets up a way to communicate to the thread.
-    fn new(id: StaffNumber, statuses_s: Sender<Status>) -> Worker {
+    fn new(id: StaffNumber, statuses_s: Sender<Status>) -> Self {
         // this channel is used by the supervisor to contact this worker
         let (instructions_s, instructions_r) = channel();
 
@@ -376,7 +376,7 @@ impl Worker {
             }
         });
 
-        Worker {
+        Self {
             instructions_s,
             thread: Some(thread),
         }
@@ -425,6 +425,8 @@ mod tests {
 
     #[test]
     fn test_threadpool_execute() {
+        const N: usize = 5;
+
         let pool = ThreadPool::new(SIZE, MODE).unwrap();
 
         let counter = Arc::new(AtomicUsize::new(0));
@@ -437,8 +439,6 @@ mod tests {
                 });
             }
         };
-
-        const N: usize = 5;
 
         for _ in 0..N {
             count_to(SIZE);
