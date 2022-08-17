@@ -6,13 +6,15 @@ use std::net::TcpStream;
 use std::thread;
 use std::time::Duration;
 
+const SIZE: usize = 4;
+
 #[test]
 fn test_http() {
     const ADDR: &str = "127.0.0.1:7878";
 
     thread::spawn(|| http_server(ADDR));
 
-    let pool = ThreadPool::new(4, PanicSwitch::Respawn).unwrap();
+    let pool = threadpool::ThreadPool::new(SIZE);
     for _ in 0..10 {
         pool.execute(|| http_client(ADDR, &Method::Get));
         pool.execute(|| http_client(ADDR, &Method::Head));
@@ -59,7 +61,7 @@ fn request(method: &str, url: &str) -> String {
 }
 
 fn http_server(addr: &str) {
-    let pool = ThreadPool::new(4, PanicSwitch::Respawn).unwrap();
+    let pool = ThreadPool::new(SIZE, PanicSwitch::Respawn).unwrap();
 
     let listener = TcpListener::bind(addr).unwrap();
 
