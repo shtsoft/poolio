@@ -64,32 +64,81 @@
 //! }
 //! ```
 
+mod thread {
+    //! This module is a wrapper for parts of the module [`std::thread`] to deal with ownership issues when joining threads embedded into a larger data structure.
+    //! It lets you spawn threads returning a handle which you can join in the usual way even if the handle is part of a larger data structure.
+
+    use std::thread;
+
+    /// Wraps [`std::thread::JoinHandle<T>`] to set up a thread-counterfeiting-heist.
+    pub type JoinHandle = Option<thread::JoinHandle<()>>;
+
+    /// Wraps [`std::thread::spawn`] in a [`Option::Some`].
+    #[inline]
+    pub fn spawn<F>(f: F) -> JoinHandle
+    where
+        F: FnOnce(),
+        F: Send + 'static,
+    {
+        Some(thread::spawn(f))
+    }
+
+    /// Carries out the thread-counterfeiting-heist on the thread embedded at call site to pass it to [`std::thread::JoinHandle<T>::join`].
+    /// - `thread` is a reference to the handle this function wants to steal.
+    ///
+    /// # Panics
+    ///
+    /// A panic is caused if the `thread` is `None` or if joining the thread fails (which is only the case when the thread has panicked).
+    pub fn join(thread: &mut JoinHandle) {
+        let thread = thread.take();
+
+        match thread {
+            Some(thread) => {
+                if let Err(e) = thread.join() {
+                    panic!("{:?}", e);
+                }
+            }
+            None => panic!("Cannot join: no thread has been provided."),
+        };
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        #[test]
+        fn test_spawn() {
+            assert!(matches!(spawn(|| {}), Some(_)));
+        }
+
+        #[test]
+        fn test_join() {
+            let mut thread = spawn(|| {});
+            join(&mut thread);
+            assert!(matches!(thread, None));
+        }
+
+        #[test]
+        #[should_panic]
+        fn test_join_panic_some() {
+            join(&mut spawn(|| panic!("Oh no!")));
+        }
+
+        #[test]
+        #[should_panic]
+        fn test_join_panic_none() {
+            join(&mut None);
+        }
+    }
+}
+
+use thread::JoinHandle;
+
 use std::fmt;
 use std::panic::UnwindSafe;
+
 use crossbeam::channel::unbounded as channel;
 use crossbeam::channel::Sender;
-use std::thread;
-
-//TODO put ThreadHandle into a module (don't forget to include the unit tests)
-/// Wraps [`std::thread::JoinHandle<T>`] to work around ownership/borrowing-issues of threads embedded in a `struct`.
-type ThreadHandle = Option<thread::JoinHandle<()>>;
-
-/// Joins a thread wrapped in a [`ThreadHandle`].
-/// - `thread` is the handle obtained with the help of [`std::option::Option<T>::take`] mitigating borrow-complaints at the call site.
-///
-/// # Panics
-///
-/// A panic is caused if the `thread` is `None` or if joining the thread fails (which is only the case when the thread has panicked).
-fn join(thread: ThreadHandle) {
-    match thread {
-        Some(thread) => {
-            if let Err(e) = thread.join() {
-                panic!("{:?}", e);
-            }
-        }
-        None => panic!("Cannot join: no thread has been provided."),
-    };
-}
 
 /// Types the jobs the [`ThreadPool`] can run.
 type Job = Box<dyn FnOnce() + UnwindSafe + Send + 'static>;
@@ -191,7 +240,7 @@ impl ThreadPool {
     fn terminate(&mut self) {
         self.send(Message::Terminate);
 
-        join(self.supervisor.thread.take());
+        thread::join(&mut self.supervisor.thread);
     }
 
     /// Wraps sending a [`Message`] to the pool.
@@ -248,7 +297,7 @@ struct Supervisor {
     /// place to put orders
     orders_s: Sender<Message>,
     /// handle to join
-    thread: ThreadHandle,
+    thread: JoinHandle,
 }
 
 impl Supervisor {
@@ -287,7 +336,7 @@ impl Supervisor {
                             break 'query_status;
                         }
                         Status::Panic(id) => {
-                            join(workers[id].thread.take());
+                            thread::join(&mut workers[id].thread);
                             match mode {
                                 PanicSwitch::Kill => {
                                     panicked_jobs += 1;
@@ -308,10 +357,10 @@ impl Supervisor {
                 match statuses_r.recv().unwrap() {
                     Status::Idle(id) => {
                         workers[id].instructions_s.send(Message::Terminate).unwrap();
-                        join(workers[id].thread.take());
+                        thread::join(&mut workers[id].thread);
                     }
                     Status::Panic(id) => {
-                        join(workers[id].thread.take());
+                        thread::join(&mut workers[id].thread);
                         if let PanicSwitch::Kill = mode {
                             panicked_jobs += 1;
                         };
@@ -329,10 +378,7 @@ impl Supervisor {
             drop(orders_r);
         });
 
-        Self {
-            orders_s,
-            thread: Some(thread),
-        }
+        Self { orders_s, thread }
     }
 }
 
@@ -341,7 +387,7 @@ struct Worker {
     /// place to put instructions
     instructions_s: Sender<Message>,
     /// handle to join
-    thread: ThreadHandle,
+    thread: JoinHandle,
 }
 
 impl Worker {
@@ -379,7 +425,7 @@ impl Worker {
 
         Self {
             instructions_s,
-            thread: Some(thread),
+            thread,
         }
     }
 }
@@ -394,23 +440,6 @@ mod tests {
     const SIZE: usize = 2; //= 6; && = 12; && = 36;
     const MODE: PanicSwitch = PanicSwitch::Respawn; //= PanicSwitch::Kill;
     const ID: StaffNumber = 0;
-
-    #[test]
-    fn test_threadhandle_join() {
-        join(Some(thread::spawn(|| {})));
-    }
-
-    #[test]
-    #[should_panic]
-    fn test_threadhandle_join_panic_some() {
-        join(Some(thread::spawn(|| panic!("Oh no!"))));
-    }
-
-    #[test]
-    #[should_panic]
-    fn test_threadhandle_join_panic_none() {
-        join(None);
-    }
 
     #[test]
     fn test_threadpool_new_ok() {
@@ -456,7 +485,7 @@ mod tests {
     #[test]
     fn test_worker_thread_newjob() {
         let (statuses_s, statuses_r) = channel();
-        let worker = Worker::new(ID, statuses_s);
+        let mut worker = Worker::new(ID, statuses_s);
 
         assert!(matches!(statuses_r.recv().unwrap(), Status::Idle(ID)));
 
@@ -473,18 +502,18 @@ mod tests {
         worker.instructions_s.send(Message::NewJob(job)).unwrap();
         assert!(matches!(statuses_r.recv().unwrap(), Status::Panic(ID)));
 
-        join(worker.thread);
+        thread::join(&mut worker.thread);
     }
 
     #[test]
     fn test_worker_thread_terminate() {
         let (statuses_s, statuses_r) = channel();
-        let worker = Worker::new(ID, statuses_s);
+        let mut worker = Worker::new(ID, statuses_s);
 
         assert!(matches!(statuses_r.recv().unwrap(), Status::Idle(ID)));
 
         worker.instructions_s.send(Message::Terminate).unwrap();
 
-        join(worker.thread);
+        thread::join(&mut worker.thread);
     }
 }
