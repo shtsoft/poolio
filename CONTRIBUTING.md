@@ -96,4 +96,4 @@ This project uses [Semantic Versioning](https://semver.org) - read that if you d
 When `development` is in a state such that [Semantic Versioning](https://semver.org) requires a version-action then edit the `version`-field of [Cargo.toml](Cargo.toml) accordingly and make a commit with message 'Release version X.Y.Z'.
 Check if publishing would work with `cargo publish --dry-run`.
 Afterwards tag the commit (`git tag vX.Y.Z -m 'Release version X.Y.Z'`) and merge development back into master.
-Finally, make a release on Github and publish on crates.io.
+Finally, make a release on Github (do not forget to attach the full benchmark results) and publish on crates.io.
