@@ -21,7 +21,7 @@ A clear and concise description of what you expected to happen.
 **Desktop (please complete the following information):**
 - Platform: [e.g. x86\_64-unknown-linux-gnu]
 - rustc-Version: [e.g. 1.58.1]
-- caargo-Version: [e.g. 1.58.0]
+- cargo-Version: [e.g. 1.58.0]
 - poolio-Version: [e.g. v.0.1.0]
 
 **Additional context**

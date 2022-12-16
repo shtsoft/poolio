@@ -1,17 +1,17 @@
-//! poolio is a thread-pool-implementation using only channels for concurrency.
+//! poolio is a thread-pool implementation using only channels for concurrency.
 //!
 //! ## Design
 //!
-//! A poolio-thread-pool is essentially made up by a 'supervisor'-thread and a specified number of 'worker'-threads.
-//! A worker's only purpose is executing jobs (in the guise of closures) while the supervisor is responsible for anything else like - most importantly - assigning jobs to workers it gets from outside the pool via the public API.
-//! To this end the thread-pool is set up in such a way that the supervisor can communicate with each worker seperately but concurrently.
+//! A poolio thread-pool is essentially made up of a 'supervisor'-thread and a specified number of 'worker'-threads.
+//! A worker's only purpose is executing jobs (in the guise of closures) while the supervisor is responsible for anything else, like - most importantly - assigning jobs to workers it gets from outside the pool via the public API.
+//! To this end, the thread-pool is set up in such a way that the supervisor can communicate with each worker seperately but concurrently.
 //! This, in particular, ensures that each worker is equally busy.
 //! A single supervisor-worker-communication is roughly as follows:
-//! 1. worker tells its current status to the supervisor
+//! 1. worker tells the supervisor its current status
 //! 2. supervisor decides what to tell the worker to do on the basis of the current order-message from outside the pool and the worker-status
 //! 3. supervisor tells the work what to do
 //! 4. worker tries to do what it was told by the supervisor
-//! 5. worker tells its current status to the supervisor
+//! 5. worker tells the supervisor its current status
 //!
 //! The following graphic illustrates the aformentioned communication-model of a supervisor-thread S and a worker-thread W:
 //!
@@ -70,7 +70,7 @@ mod thread {
 
     use std::thread;
 
-    /// Wraps [`std::thread::JoinHandle<T>`] to set up a thread-counterfeiting-heist.
+    /// Wraps [`std::thread::JoinHandle<T>`] to set up a thread-counterfeiting heist.
     pub type JoinHandle = Option<thread::JoinHandle<()>>;
 
     /// Wraps [`std::thread::spawn`] in a [`Option::Some`].
@@ -83,7 +83,7 @@ mod thread {
         Some(thread::spawn(f))
     }
 
-    /// Carries out the thread-counterfeiting-heist on the thread embedded at call site to pass it to [`std::thread::JoinHandle<T>::join`].
+    /// Carries out the thread-counterfeiting heist on the thread embedded at the call site to pass it to [`std::thread::JoinHandle<T>::join`].
     /// - `thread` is a reference to the handle this function wants to steal.
     ///
     /// # Panics
@@ -204,7 +204,7 @@ impl ThreadPool {
     /// Runs a job in `self`.
     /// - `f` is the job to be run and has to be provided as a certain closure.
     ///
-    /// Note that if `f` panics the behavior is according to the setting of the [`PanicSwitch`] of `self`.
+    /// Note that if `f` panics, the behavior is according to the setting of the [`PanicSwitch`] of `self`.
     ///
     /// # Panics
     ///
@@ -258,12 +258,12 @@ impl ThreadPool {
 impl Drop for ThreadPool {
     /// Tries to shut down `self` gracefully.
     ///
-    /// In particular, one has to assume that all remaining jobs will be finished (modulo panics in [`PanicSwitch::Kill`] setting).
+    /// In particular, one has to assume that all remaining jobs will be finished (modulo panics in [`PanicSwitch::Kill`]-mode).
     ///
     /// # Panics
     ///
     /// A panic occurs if
-    /// 1. the the pool is unreachable
+    /// 1. the pool is unreachable
     /// 2. joining the threads panics.
     ///
     /// Remember that a panic while dropping aborts the whole process.
@@ -306,7 +306,7 @@ impl Supervisor {
     /// - `mode` configures what happens when workers report panicking jobs.
     ///
     /// In particular, it spawns a thread and sets up a way to communicate to the thread.
-    /// Moreover it creates the workers controlled by the just spawned supervisor-thread.
+    /// Moreover, it creates the workers controlled by the just spawned supervisor-thread.
     fn new(mut number_of_workers: usize, mode: PanicSwitch) -> Self {
         // this channel is used by the pool to contact the supervisor
         let (orders_s, orders_r) = channel();
@@ -315,7 +315,7 @@ impl Supervisor {
             // this channel is used by the workers to contact the supervisor
             let (statuses_s, statuses_r) = channel();
 
-            // consrtruct `number_of_workers` worker-threads
+            // construct `number_of_workers` worker-threads
             let mut workers = Vec::with_capacity(number_of_workers);
             for id in 0..number_of_workers {
                 workers.push(Worker::new(id, statuses_s.clone()));

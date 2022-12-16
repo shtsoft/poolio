@@ -25,7 +25,7 @@ A **simple** and **safe** and **fast** thread-pool based on pure message-passing
     + no deadlocks
 - performance:
   * [crossbeam](https://github.com/crossbeam-rs/crossbeam)-channels
-  * as fast as the most popular rust [threadpool](https://github.com/rust-threadpool/rust-threadpool) (see [Benches](#benches))
+  * as fast as the most popular Rust [threadpool](https://github.com/rust-threadpool/rust-threadpool) (see [Benches](#benches))
 
 For documumentation see [Released API docs](https://docs.rs/poolio).
 In particular, you can find a design- and usage-description there.
