@@ -8,8 +8,8 @@
 [crates-url]: https://crates.io/crates/poolio
 [license-badge]: https://img.shields.io/badge/license-GPL-blue.svg
 [license-url]: ./Cargo.toml
-[actions-badge]: https://github.com/aronpaulson/poolio/actions/workflows/ci.yaml/badge.svg
-[actions-url]: https://github.com/aronpaulson/poolio/actions/workflows/ci.yaml
+[actions-badge]: https://github.com/shtsoft/poolio/actions/workflows/ci.yaml/badge.svg
+[actions-url]: https://github.com/shtsoft/poolio/actions/workflows/ci.yaml
 
 A **simple** and **safe** and **fast** thread-pool based on pure message-passing concurrency defying the mainstream.
 
@@ -41,7 +41,7 @@ On a computer 'Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz' (6 cores and 12 CPUs) r
 | 12 workers | 25.295 ms  | 24.772 ms  |
 
 This suggests that the poolio and threadpool are equally performant.
-The full result can be downloaded [here](https://github.com/aronpaulson/poolio/releases/latest/download/benches.tar.gz).
+The full result can be downloaded [here](https://github.com/shtsoft/poolio/releases/latest/download/benches.tar.gz).
 (The benchmarks are powered by [criterion](https://github.com/bheisler/criterion.rs).)
 
 ## Contributing
