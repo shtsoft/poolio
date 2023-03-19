@@ -77,8 +77,7 @@ mod thread {
     #[inline]
     pub fn spawn<F>(f: F) -> JoinHandle
     where
-        F: FnOnce(),
-        F: Send + 'static,
+        F: FnOnce() + Send + 'static,
     {
         Some(thread::spawn(f))
     }
@@ -286,8 +285,8 @@ enum Status {
 impl fmt::Display for Status {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            Status::Idle(_) => write!(f, "[idle]"),
-            Status::Panic(_) => write!(f, "[panic]"),
+            Self::Idle(_) => write!(f, "[idle]"),
+            Self::Panic(_) => write!(f, "[panic]"),
         }
     }
 }
