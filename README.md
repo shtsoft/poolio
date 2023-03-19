@@ -37,8 +37,8 @@ On a computer 'Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz' (6 cores and 12 CPUs) r
 
 | Primes     | poolio     | threadpool |
 | ---------- | ----------:| ----------:|
-| 6 workers  | 29.251 ms  | 29.855 ms  |
-| 12 workers | 25.295 ms  | 24.772 ms  |
+| 6 workers  | 27.468 ms  | 28.431 ms  |
+| 12 workers | 24.056 ms  | 23.456 ms  |
 
 This suggests that the poolio and threadpool are equally performant.
 The full result can be downloaded [here](https://github.com/shtsoft/poolio/releases/latest/download/benches.tar.gz).
