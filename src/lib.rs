@@ -139,14 +139,14 @@ use std::panic::UnwindSafe;
 use crossbeam::channel::unbounded as channel;
 use crossbeam::channel::Sender;
 
-/// Types the jobs the [`ThreadPool`] can run.
+/// The type of the jobs the [`ThreadPool`] can run.
 type Job = Box<dyn FnOnce() + UnwindSafe + Send + 'static>;
 
-/// Defines what the [`ThreadPool`] can be ordered to do.
+/// Messages with orders for the [`ThreadPool`].
 enum Message {
-    /// Order the pool to execute a job.
+    /// A message to order the pool to execute a job.
     NewJob(Job),
-    /// Order the pool to finish its remaining jobs and shut down afterwards.
+    /// A meassage to order the pool to finish its remaining jobs and shut down afterwards.
     Terminate,
 }
 
@@ -159,15 +159,15 @@ impl fmt::Display for Message {
     }
 }
 
-/// Configures what the [`ThreadPool`] is supposed to do in case of a 'panicking job', that is, a job which panics while running in a thread.
+/// Configurations of the [`ThreadPool`] for the handling of panics in jobs.
 pub enum PanicSwitch {
-    /// Configure the pool to finish parallely running jobs and then kill the whole process in case of a panicked job.
+    /// The configuration where the pool finishes parallely running jobs and then kills the whole process in case of a panicked job.
     Kill,
-    /// Configure the pool to ignore panicked jobs and just respawn the polluted threads.
+    /// The configuration where the pool ignores panicked jobs and just respawns the polluted threads.
     Respawn,
 }
 
-/// Abstracts the thread-pools.
+/// Abstracts thread-pools.
 pub struct ThreadPool {
     /// interface to the pool-controlling thread
     supervisor: Supervisor,
@@ -201,13 +201,15 @@ impl ThreadPool {
     }
 
     /// Runs a job in `self`.
-    /// - `f` is the job to be run and has to be provided as a certain closure.
-    ///
-    /// Note that if `f` panics, the behavior is according to the setting of the [`PanicSwitch`] of `self`.
+    /// - `f` is the job to be run and has to be provided as a closure.
     ///
     /// # Panics
     ///
     /// A panic is caused if the pool is unreachable.
+    ///
+    /// # Notes
+    ///
+    /// If `f` panics, the behavior is according to the setting of the [`PanicSwitch`] of `self`.
     ///
     /// # Examples
     ///
@@ -229,13 +231,15 @@ impl ThreadPool {
 
     /// Tries to shut down `self` gracefully.
     ///
-    /// In particular, one has to assume that all remaining jobs will be finished (modulo panics in [`PanicSwitch::Kill`]-mode).
-    ///
     /// # Panics
     ///
     /// A panic occurs if
     /// 1. the pool is unreachable.
-    /// 2. joining the threads panics.
+    /// 2. joining the threads panics
+    ///
+    /// # Notes
+    ///
+    /// Shutting down gracefully in particular means that all remaining jobs will be finished (modulo panics in [`PanicSwitch::Kill`]-mode).
     fn terminate(&mut self) {
         self.send(Message::Terminate);
 
@@ -257,28 +261,28 @@ impl ThreadPool {
 impl Drop for ThreadPool {
     /// Tries to shut down `self` gracefully.
     ///
-    /// In particular, one has to assume that all remaining jobs will be finished (modulo panics in [`PanicSwitch::Kill`]-mode).
-    ///
     /// # Panics
     ///
     /// A panic occurs if
     /// 1. the pool is unreachable
-    /// 2. joining the threads panics.
+    /// 2. joining the threads panics
     ///
     /// Remember that a panic while dropping aborts the whole process.
+    ///
+    /// # Notes
+    ///
+    /// Shutting down gracefully in particular means that all remaining jobs will be finished (modulo panics in [`PanicSwitch::Kill`]-mode).
     fn drop(&mut self) {
         self.terminate();
     }
 }
 
-/// [`StaffNumber`]s identify workers.
+/// A type of numbers to identify workers.
 type StaffNumber = usize;
 
-/// [`Status`] is what worker with [`StaffNumber`] is currently doing.
+/// States a particular worker can be in when not busy.
 enum Status {
-    /// worker `id` is idle.
     Idle(StaffNumber),
-    /// worker `id` has a panicked job.
     Panic(StaffNumber),
 }
 
@@ -291,21 +295,18 @@ impl fmt::Display for Status {
     }
 }
 
-/// [`Supervisor`] abstracts the supervisors.
+/// Abstracts supervisors.
 struct Supervisor {
     /// place to put orders
     orders_s: Sender<Message>,
-    /// handle to join
+    /// handle to join the supervisor thread
     thread: JoinHandle,
 }
 
 impl Supervisor {
     /// Sets up a supervisor.
-    /// - `number_of_workers` is how many workers are employed.
+    /// - `number_of_workers` is how many workers have to be 'employed'.
     /// - `mode` configures what happens when workers report panicking jobs.
-    ///
-    /// In particular, it spawns a thread and sets up a way to communicate to the thread.
-    /// Moreover, it creates the workers controlled by the just spawned supervisor-thread.
     fn new(mut number_of_workers: usize, mode: PanicSwitch) -> Self {
         // this channel is used by the pool to contact the supervisor
         let (orders_s, orders_r) = channel();
@@ -381,11 +382,11 @@ impl Supervisor {
     }
 }
 
-/// [`Worker`] abstracts workers.
+/// Abstracts workers.
 struct Worker {
     /// place to put instructions
     instructions_s: Sender<Message>,
-    /// handle to join
+    /// handle to join the worker thread
     thread: JoinHandle,
 }
 
@@ -393,8 +394,6 @@ impl Worker {
     /// Sets up a new worker.
     /// - `id` is the worker's staff number.
     /// - `statuses_s` is where the worker puts its current status.
-    ///
-    /// In particular, it spawns a thread and sets up a way to communicate to the thread.
     fn new(id: StaffNumber, statuses_s: Sender<Status>) -> Self {
         // this channel is used by the supervisor to contact this worker
         let (instructions_s, instructions_r) = channel();
