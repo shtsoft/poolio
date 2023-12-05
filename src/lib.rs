@@ -107,14 +107,14 @@ mod thread {
 
         #[test]
         fn test_spawn() {
-            assert!(matches!(spawn(|| {}), Some(_)));
+            assert!(spawn(|| {}).is_some());
         }
 
         #[test]
         fn test_join() {
             let mut thread = spawn(|| {});
             join(&mut thread);
-            assert!(matches!(thread, None));
+            assert!(thread.is_none());
         }
 
         #[test]
@@ -361,7 +361,7 @@ impl Supervisor {
                     }
                     Status::Panic(id) => {
                         thread::join(&mut workers[id].thread);
-                        if let PanicSwitch::Kill = mode {
+                        if matches!(mode, PanicSwitch::Kill) {
                             panicked_jobs += 1;
                         };
                     }
@@ -442,13 +442,13 @@ mod tests {
     #[test]
     fn test_threadpool_new_ok() {
         let pool = ThreadPool::new(SIZE, MODE);
-        assert!(matches!(pool, Ok(_)));
+        assert!(pool.is_ok());
     }
 
     #[test]
     fn test_threadpool_new_err() {
         let pool = ThreadPool::new(0, MODE);
-        assert!(matches!(pool, Err(_)));
+        assert!(pool.is_err());
     }
 
     #[test]
@@ -470,7 +470,7 @@ mod tests {
 
         for _ in 0..N {
             count_to(SIZE);
-            if let PanicSwitch::Respawn = MODE {
+            if matches!(MODE, PanicSwitch::Respawn) {
                 pool.execute(|| panic!("Oh no!"));
             }
         }
