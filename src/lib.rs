@@ -1,10 +1,10 @@
-//! poolio is a thread-pool implementation using only channels for concurrency.
+//! poolio is a thread pool implementation using only channels for concurrency.
 //!
 //! ## Design
 //!
-//! A poolio thread-pool is essentially made up of a 'supervisor'-thread and a specified number of 'worker'-threads.
+//! A poolio thread pool is essentially made up of a 'supervisor'-thread and a specified number of 'worker'-threads.
 //! A worker's only purpose is executing jobs (in the guise of closures) while the supervisor is responsible for anything else, like - most importantly - assigning jobs to workers it gets from outside the pool via the public API.
-//! To this end, the thread-pool is set up in such a way that the supervisor can communicate with each worker seperately but concurrently.
+//! To this end, the thread pool is set up in such a way that the supervisor can communicate with each worker seperately but concurrently.
 //! This, in particular, ensures that each worker is equally busy.
 //! A single supervisor-worker-communication is roughly as follows:
 //! 1. worker tells the supervisor its current status
@@ -167,7 +167,7 @@ pub enum PanicSwitch {
     Respawn,
 }
 
-/// Abstracts thread-pools.
+/// Abstracts thread pools.
 pub struct ThreadPool {
     /// interface to the pool-controlling thread
     supervisor: Supervisor,

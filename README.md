@@ -11,7 +11,7 @@
 [actions-badge]: https://github.com/shtsoft/poolio/actions/workflows/ci.yaml/badge.svg
 [actions-url]: https://github.com/shtsoft/poolio/actions/workflows/ci.yaml
 
-A **simple** and **safe** and **fast** thread-pool based on pure message-passing concurrency defying the mainstream.
+A **simple** and **safe** and **fast** thread pool based on pure message-passing concurrency defying the mainstream.
 
 - simplicity:
   * small API
