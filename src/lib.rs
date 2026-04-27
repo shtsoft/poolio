@@ -2,18 +2,18 @@
 //!
 //! ## Design
 //!
-//! A poolio thread pool is essentially made up of a 'supervisor'-thread and a specified number of 'worker'-threads.
-//! A worker's only purpose is executing jobs (in the guise of closures) while the supervisor is responsible for anything else, like - most importantly - assigning jobs to workers it gets from outside the pool via the public API.
-//! To this end, the thread pool is set up in such a way that the supervisor can communicate with each worker seperately but concurrently.
-//! This, in particular, ensures that each worker is equally busy.
-//! A single supervisor-worker-communication is roughly as follows:
-//! 1. worker tells the supervisor its current status
-//! 2. supervisor decides what to tell the worker to do on the basis of the current order-message from outside the pool and the worker-status
-//! 3. supervisor tells the work what to do
-//! 4. worker tries to do what it was told by the supervisor
-//! 5. worker tells the supervisor its current status
+//! A poolio thread pool is essentially made up of a 'supervisor' thread and a specified number of 'worker' threads.
+//! A worker's only purpose is executing jobs (in the form of closures), while the supervisor is responsible for everything else - most importantly, assigning jobs to workers that it receives from outside the pool via the public API.
+//! To this end, the thread pool is set up so that the supervisor can communicate with each worker separately and concurrently.
+//! This ensures that each worker remains equally busy.
+//! A single supervisor-worker communication cycle is roughly as follows:
+//! 1. The worker tells the supervisor its current status.
+//! 2. The supervisor decides what to tell the worker to do based on the current order-message from outside the pool and the worker's status.
+//! 3. The supervisor tells the worker what to do.
+//! 4. The worker attempts to perform the task assigned by the supervisor.
+//! 5. The worker tells the supervisor its current status.
 //!
-//! The following graphic illustrates the aformentioned communication-model of a supervisor-thread S and a worker-thread W:
+//! The following graphic illustrates the aforementioned communication model between a supervisor thread S and a worker thread W:
 //!
 //! <pre>
 //!    W
@@ -42,11 +42,11 @@
 //!
 //! ## Usage
 //!
-//! To use a poolio-[`ThreadPool`] you simply have to set one up using the [`ThreadPool::new`]-method and task the pool to run jobs using the [`ThreadPool::execute`]-method.
+//! To use a poolio [`ThreadPool`], you simply set one up using the [`ThreadPool::new`] method and task the pool to run jobs using the [`ThreadPool::execute`] method.
 //!
 //! # Examples
 //!
-//! Setting up a pool to make some server multi-threaded:
+//! Setting up a pool to make a server multi-threaded:
 //!
 //! ```
 //! fn handle(req: usize) {
@@ -65,15 +65,15 @@
 //! ```
 
 mod thread {
-    //! This module is a wrapper for parts of the module [`std::thread`] to deal with ownership issues when joining threads embedded into a larger data structure.
-    //! It lets you spawn threads returning a handle which you can join in the usual way even if the handle is part of a larger data structure.
+    //! This module is a wrapper for parts of the [`std::thread`] module to handle ownership issues when joining threads embedded in a larger data structure.
+    //! It allows you to spawn threads that return a handle, which you can join normally even if the handle is part of a larger data structure.
 
     use std::thread;
 
-    /// Wraps [`std::thread::JoinHandle<T>`] to set up a thread-counterfeiting heist.
+    /// Wraps [`std::thread::JoinHandle<T>`] to allow for "stealing" the handle for joining.
     pub type JoinHandle = Option<thread::JoinHandle<()>>;
 
-    /// Wraps [`std::thread::spawn`] in a [`Option::Some`].
+    /// Wraps [`std::thread::spawn`] in an [`Option::Some`].
     #[inline]
     pub fn spawn<F>(f: F) -> JoinHandle
     where
@@ -82,12 +82,12 @@ mod thread {
         Some(thread::spawn(f))
     }
 
-    /// Carries out the thread-counterfeiting heist on the thread embedded at the call site to pass it to [`std::thread::JoinHandle<T>::join`].
-    /// - `thread` is a reference to the handle this function wants to steal.
+    /// Takes the thread handle from the call site to pass it to [`std::thread::JoinHandle<T>::join`].
+    /// - `thread` is a reference to the handle this function intends to take.
     ///
     /// # Panics
     ///
-    /// A panic is caused if the `thread` is `None` or if joining the thread fails (which is only the case when the thread has panicked).
+    /// Panics if the `thread` is `None` or if joining the thread fails (which occurs if the thread panicked).
     pub fn join(thread: &mut JoinHandle) {
         let thread = thread.take();
 
@@ -139,14 +139,14 @@ use std::panic::UnwindSafe;
 use crossbeam::channel::unbounded as channel;
 use crossbeam::channel::Sender;
 
-/// The type of the jobs the [`ThreadPool`] can run.
+/// The type of jobs the [`ThreadPool`] can run.
 type Job = Box<dyn FnOnce() + UnwindSafe + Send + 'static>;
 
-/// Messages with orders for the [`ThreadPool`].
+/// Messages containing orders for the [`ThreadPool`].
 enum Message {
-    /// A message to order the pool to execute a job.
+    /// A message ordering the pool to execute a job.
     NewJob(Job),
-    /// A meassage to order the pool to finish its remaining jobs and shut down afterwards.
+    /// A message ordering the pool to finish its remaining jobs and then shut down.
     Terminate,
 }
 
@@ -159,32 +159,32 @@ impl fmt::Display for Message {
     }
 }
 
-/// Configurations of the [`ThreadPool`] for the handling of panics in jobs.
+/// Configuration for how the [`ThreadPool`] handles panics in jobs.
 pub enum PanicSwitch {
-    /// The configuration where the pool finishes parallely running jobs and then kills the whole process in case of a panicked job.
+    /// The pool finishes parallel running jobs and then kills the entire process if a job panics.
     Kill,
-    /// The configuration where the pool ignores panicked jobs and just respawns the polluted threads.
+    /// The pool ignores panicked jobs and simply respawns the affected threads.
     Respawn,
 }
 
 /// Abstracts thread pools.
 pub struct ThreadPool {
-    /// interface to the pool-controlling thread
+    /// Interface to the pool-controlling thread.
     supervisor: Supervisor,
 }
 
 impl ThreadPool {
     /// Sets up a new pool.
-    /// - `size` is the (non-zero) number of worker-threads in the pool.
-    /// - `mode` is the setting of the panic switch.
+    /// - `size` is the (non-zero) number of worker threads in the pool.
+    /// - `mode` is the setting for the panic switch.
     ///
     /// # Errors
     ///
-    /// An error is returned if 0 was passed as `size` (since a pool without worker-threads does not make sense).
+    /// Returns an error if `size` is 0 (as a pool without worker threads is invalid).
     ///
     /// # Examples
     ///
-    /// Setting up a pool with three worker-threads in kill-mode:
+    /// Setting up a pool with three worker threads in kill-mode:
     ///
     /// ```
     /// let pool = poolio::ThreadPool::new(3, poolio::PanicSwitch::Kill).unwrap();
@@ -201,15 +201,15 @@ impl ThreadPool {
     }
 
     /// Runs a job in `self`.
-    /// - `f` is the job to be run and has to be provided as a closure.
+    /// - `f` is the job to be run, provided as a closure.
     ///
     /// # Panics
     ///
-    /// A panic is caused if the pool is unreachable.
+    /// Panics if the pool is unreachable.
     ///
     /// # Notes
     ///
-    /// If `f` panics, the behavior is according to the setting of the [`PanicSwitch`] of `self`.
+    /// If `f` panics, the behavior is determined by the [`PanicSwitch`] setting of `self`.
     ///
     /// # Examples
     ///
@@ -229,17 +229,17 @@ impl ThreadPool {
         self.send(Message::NewJob(job));
     }
 
-    /// Tries to shut down `self` gracefully.
+    /// Attempts to shut down `self` gracefully.
     ///
     /// # Panics
     ///
-    /// A panic occurs if
-    /// 1. the pool is unreachable.
-    /// 2. joining the threads panics
+    /// Panics if:
+    /// 1. The pool is unreachable.
+    /// 2. Joining the threads causes a panic.
     ///
     /// # Notes
     ///
-    /// Shutting down gracefully in particular means that all remaining jobs will be finished (modulo panics in [`PanicSwitch::Kill`]-mode).
+    /// Graceful shutdown ensures all remaining jobs are finished (except for panics in [`PanicSwitch::Kill`] mode).
     fn terminate(&mut self) {
         self.send(Message::Terminate);
 
@@ -250,7 +250,7 @@ impl ThreadPool {
     ///
     /// # Panics
     ///
-    /// A panic is caused if the receiver has already been deallocated.
+    /// Panics if the receiver has already been deallocated.
     fn send(&self, msg: Message) {
         let panic_message = format!("Ordering {} failed. Pool is unreachable.", msg);
 
@@ -259,28 +259,28 @@ impl ThreadPool {
 }
 
 impl Drop for ThreadPool {
-    /// Tries to shut down `self` gracefully.
+    /// Attempts to shut down `self` gracefully.
     ///
     /// # Panics
     ///
-    /// A panic occurs if
-    /// 1. the pool is unreachable
-    /// 2. joining the threads panics
+    /// Panics if:
+    /// 1. The pool is unreachable.
+    /// 2. Joining the threads causes a panic.
     ///
-    /// Remember that a panic while dropping aborts the whole process.
+    /// Note: A panic during a drop will abort the entire process.
     ///
     /// # Notes
     ///
-    /// Shutting down gracefully in particular means that all remaining jobs will be finished (modulo panics in [`PanicSwitch::Kill`]-mode).
+    /// Graceful shutdown ensures all remaining jobs are finished (except for panics in [`PanicSwitch::Kill`] mode).
     fn drop(&mut self) {
         self.terminate();
     }
 }
 
-/// A type of numbers to identify workers.
+/// A numeric type used to identify workers.
 type StaffNumber = usize;
 
-/// States a particular worker can be in when not busy.
+/// States a worker can be in when not busy.
 enum Status {
     Idle(StaffNumber),
     Panic(StaffNumber),
@@ -297,34 +297,34 @@ impl fmt::Display for Status {
 
 /// Abstracts supervisors.
 struct Supervisor {
-    /// place to put orders
+    /// Channel for sending orders.
     orders_s: Sender<Message>,
-    /// handle to join the supervisor thread
+    /// Handle to join the supervisor thread.
     thread: JoinHandle,
 }
 
 impl Supervisor {
     /// Sets up a supervisor.
-    /// - `number_of_workers` is how many workers have to be 'employed'.
-    /// - `mode` configures what happens when workers report panicking jobs.
+    /// - `number_of_workers` is the number of workers to employ.
+    /// - `mode` configures behavior when workers report panicked jobs.
     fn new(mut number_of_workers: usize, mode: PanicSwitch) -> Self {
-        // this channel is used by the pool to contact the supervisor
+        // This channel is used by the pool to contact the supervisor.
         let (orders_s, orders_r) = channel();
 
         let thread = thread::spawn(move || {
-            // this channel is used by the workers to contact the supervisor
+            // This channel is used by the workers to contact the supervisor.
             let (statuses_s, statuses_r) = channel();
 
-            // construct `number_of_workers` worker-threads
+            // Construct `number_of_workers` worker threads.
             let mut workers = Vec::with_capacity(number_of_workers);
             for id in 0..number_of_workers {
                 workers.push(Worker::new(id, statuses_s.clone()));
             }
 
-            // track how many jobs have panicked
+            // Track how many jobs have panicked.
             let mut panicked_jobs = 0;
 
-            // keepin' running to distribute jobs among idle workers
+            // Keep running to distribute jobs among idle workers.
             'distribute_jobs: while let Message::NewJob(job) = orders_r.recv().unwrap() {
                 'query_status: loop {
                     match statuses_r.recv().unwrap() {
@@ -352,7 +352,7 @@ impl Supervisor {
                 }
             }
 
-            // destruct all remaining worker-threads
+            // Destruct all remaining worker threads.
             while number_of_workers != 0 {
                 match statuses_r.recv().unwrap() {
                     Status::Idle(id) => {
@@ -374,7 +374,7 @@ impl Supervisor {
                 std::process::abort();
             }
 
-            // ensure that `orders_r` lives as long as the thread to prevent reachability-errors
+            // Ensure that `orders_r` lives as long as the thread to prevent reachability errors.
             drop(orders_r);
         });
 
@@ -384,25 +384,25 @@ impl Supervisor {
 
 /// Abstracts workers.
 struct Worker {
-    /// place to put instructions
+    /// Channel for sending instructions.
     instructions_s: Sender<Message>,
-    /// handle to join the worker thread
+    /// Handle to join the worker thread.
     thread: JoinHandle,
 }
 
 impl Worker {
     /// Sets up a new worker.
     /// - `id` is the worker's staff number.
-    /// - `statuses_s` is where the worker puts its current status.
+    /// - `statuses_s` is where the worker reports its current status.
     fn new(id: StaffNumber, statuses_s: Sender<Status>) -> Self {
-        // this channel is used by the supervisor to contact this worker
+        // This channel is used by the supervisor to contact this worker.
         let (instructions_s, instructions_r) = channel();
 
         let thread = thread::spawn(move || {
-            // report for duty
+            // Report for duty.
             statuses_s.send(Status::Idle(id)).unwrap();
 
-            // keepin' running to execute jobs
+            // Keep running to execute jobs.
             loop {
                 let message = instructions_r.recv().unwrap();
 
