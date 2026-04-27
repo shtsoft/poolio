@@ -14,7 +14,7 @@ where
 
             fn is_prime(i: usize) -> bool {
                 for j in 2..(i / 2) {
-                    if i % j == 0 {
+                    if i.is_multiple_of(j) {
                         return false;
                     }
                 }
@@ -28,7 +28,7 @@ where
             for i in 2..cap {
                 if is_prime(i) {
                     primes.push(i);
-                };
+                }
             }
 
             let mut counter = 0;

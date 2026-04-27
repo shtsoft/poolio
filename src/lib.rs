@@ -98,7 +98,7 @@ mod thread {
                 }
             }
             None => panic!("Cannot join: no thread has been provided."),
-        };
+        }
     }
 
     #[cfg(test)]
@@ -192,7 +192,7 @@ impl ThreadPool {
     pub fn new<'a>(size: usize, mode: PanicSwitch) -> Result<Self, &'a str> {
         if size == 0 {
             return Err("Setting up a pool with no workers is not allowed.");
-        };
+        }
 
         let pool = Self {
             supervisor: Supervisor::new(size, mode),
@@ -346,7 +346,7 @@ impl Supervisor {
                                 PanicSwitch::Respawn => {
                                     workers[id] = Worker::new(id, statuses_s.clone());
                                 }
-                            };
+                            }
                         }
                     }
                 }
@@ -363,9 +363,9 @@ impl Supervisor {
                         thread::join(&mut workers[id].thread);
                         if matches!(mode, PanicSwitch::Kill) {
                             panicked_jobs += 1;
-                        };
+                        }
                     }
-                };
+                }
                 number_of_workers -= 1;
             }
 
@@ -408,7 +408,7 @@ impl Worker {
 
                 match message {
                     Message::NewJob(job) => match std::panic::catch_unwind(job) {
-                        Ok(_) => {
+                        Ok(()) => {
                             statuses_s.send(Status::Idle(id)).unwrap();
                         }
                         Err(_) => {
